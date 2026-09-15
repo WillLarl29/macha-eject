@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec.bak
+salida/*.xlsx
+!salida/.gitkeep
+
+# Excels de muestra: pueden traer datos personales reales (nombres, DNI, correos, celulares)
+muestras/*.xlsx

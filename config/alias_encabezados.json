@@ -1,0 +1,75 @@
+{
+  "_descripcion": "Registro de mapeo entre encabezados de los Excels de entrada y las variables de la plantilla (plantilla/Encabezados.xlsx). Se completa manualmente a medida que se revisan archivos/capturas reales; no se infieren mapeos automaticamente.",
+  "_estado": "Mapeo general ExitoESAN (16 columnas) confirmado con 1 archivo real + 1 captura comparativa de 5 formularios mas",
+  "mapeo_general_exitoesan": true,
+  "variables_plantilla": [
+    { "columna": "A", "variable": "FORMULARIO", "alias_conocidos": [], "calculada": true, "derivada_de": "nombre_de_hoja", "formula": "mismo valor para todas las filas de la hoja: el nombre de hoja/formulario", "notas": "" },
+    { "columna": "B", "variable": "PARTICIPANTE", "alias_conocidos": ["Participante"], "calculada": false, "notas": "" },
+    { "columna": "C", "variable": "NOMBRE", "alias_conocidos": ["Nombre"], "calculada": false, "notas": "" },
+    { "columna": "D", "variable": "AP. PATERNO", "alias_conocidos": ["Apellido Paterno"], "calculada": false, "notas": "" },
+    { "columna": "E", "variable": "APE. MATERNO", "alias_conocidos": ["Apellido Materno"], "calculada": false, "notas": "" },
+    { "columna": "F", "variable": "DNI", "alias_conocidos": ["DNI"], "calculada": false, "notas": "" },
+    { "columna": "G", "variable": "CORREO", "alias_conocidos": ["Correo Electrónico"], "calculada": false, "notas": "" },
+    { "columna": "H", "variable": "CELULAR", "alias_conocidos": ["Celular"], "calculada": false, "notas": "" },
+    { "columna": "I", "variable": "AÑO CURSANDO", "alias_conocidos": ["Año que cursa"], "calculada": false, "notas": "" },
+    { "columna": "J", "variable": "MODALIDAD DE ADMISIÓN", "alias_conocidos": ["Modalidad"], "calculada": false, "notas": "" },
+    { "columna": "K", "variable": "CARRERA DE INTERÉS", "alias_conocidos": ["Carrera"], "calculada": false, "notas": "" },
+    { "columna": "L", "variable": "CONSULTAS", "alias_conocidos": [], "calculada": false, "notas": "Hasta ahora ningun formulario visto trae esta columna." },
+    { "columna": "M", "variable": "PROCEDENCIA", "alias_conocidos": ["Información de Cookie"], "calculada": false, "notas": "" },
+    { "columna": "N", "variable": "ACEPTA POLÍTICAS", "alias_conocidos": ["Acepta Trámite de Datos"], "calculada": false, "notas": "" },
+    { "columna": "O", "variable": "ACEPTA PUBLICIDAD", "alias_conocidos": ["Acepta Publicidad"], "calculada": false, "notas": "" },
+    { "columna": "P", "variable": "FECHA DE REGISTRO2", "alias_conocidos": [], "calculada": true, "derivada_de": "FECHA DE REGISTRO", "formula": "mismo valor que FECHA DE REGISTRO (fecha y hora completas)", "notas": "" },
+    { "columna": "Q", "variable": "FECHA", "alias_conocidos": [], "calculada": true, "derivada_de": "FECHA DE REGISTRO", "formula": "solo la parte de fecha, sin la hora", "notas": "" },
+    { "columna": "R", "variable": "FECHA DE REGISTRO", "alias_conocidos": ["Fecha de Registro"], "calculada": false, "notas": "trae fecha y hora juntas, ej. '2026-09-14 18:22:55'" },
+    { "columna": "S", "variable": "DIA", "alias_conocidos": [], "calculada": true, "derivada_de": "FECHA DE REGISTRO", "formula": "dia numerico extraido de la fecha", "notas": "" },
+    { "columna": "T", "variable": "MES", "alias_conocidos": [], "calculada": true, "derivada_de": "FECHA DE REGISTRO", "formula": "mes numerico extraido de la fecha", "notas": "" },
+    { "columna": "U", "variable": "AÑO", "alias_conocidos": [], "calculada": true, "derivada_de": "FECHA DE REGISTRO", "formula": "año numerico extraido de la fecha", "notas": "" }
+  ],
+  "reglas": {
+    "nombre_hoja": "PENDIENTE - se definira con mas ejemplos reales de nombres de archivo de entrada",
+    "fila_encabezado_origen": "buscar en la fila 1 y, si no se encuentra, en la fila 2 del excel entrante",
+    "un_archivo_una_hoja": "cada Excel de entrada aporta una sola hoja al consolidado (se usa su hoja activa/primera hoja)",
+    "variable_sin_encabezado_en_archivo": "Si el encabezado de una variable no aparece en el archivo de entrada, esa variable queda vacia para todas las filas de esa hoja. Regla general, aplica a cualquiera de las 21 variables (no solo CONSULTAS/PROCEDENCIA).",
+    "deteccion_a_prueba_de_errores": "Como la posicion de columna NO es fija entre archivos (varia por formulario), la deteccion debe hacerse por texto de encabezado, no por posicion. Comparar el texto normalizado (sin tildes, mayusculas/minusculas, espacios recortados) contra alias_conocidos exigiendo coincidencia EXACTA del texto normalizado, no coincidencia parcial/por contiene, para evitar asignar una variable equivocada."
+  },
+  "formatos_origen": [
+    {
+      "formulario": "Comunícate con UE - ExitoESAN",
+      "verificado_con": "archivo real",
+      "archivo_muestra": "muestras/Comunícate con UE - ExitoESAN 2026-09-15 161417.xlsx",
+      "hoja_origen": "Sheet1",
+      "fila_encabezado": 2,
+      "columnas_origen_detectadas": ["Fecha de Registro", "Nombre", "Apellido Paterno", "Apellido Materno", "DNI", "Celular", "Correo Electrónico", "Información de Cookie", "Acepta Trámite de Datos", "Acepta Publicidad", "Carrera", "Modalidad", "Año que cursa", "Participante", "Edad", "Acepta Participación"],
+      "columnas_descartadas": ["Edad", "Acepta Participación"],
+      "notas": "Fila 1 solo trae un titulo ('Esan University - Administración'), no encabezados."
+    },
+    {
+      "formulario": "OPEN DAY",
+      "verificado_con": "captura comparativa (no archivo real todavia)",
+      "columnas_origen_detectadas": ["Fecha de Registro", "Nombre", "Apellido Paterno", "Apellido Materno", "DNI", "Celular", "Correo Electrónico", "Información de Cookie", "Acepta Trámite de Datos", "Acepta Publicidad", "Carrera", "Año que cursa", "Participante", "Edad", "Acepta Participación"],
+      "columnas_ausentes": ["Modalidad"],
+      "notas": "Mismo esquema de 16 columnas ExitoESAN; sin columna Modalidad."
+    },
+    {
+      "formulario": "Carreras Comunicate",
+      "verificado_con": "captura comparativa (no archivo real todavia)",
+      "columnas_origen_detectadas": ["Fecha de Registro", "Nombre", "Apellido Paterno", "Apellido Materno", "DNI", "Celular", "Correo Electrónico", "Información de Cookie", "Acepta Trámite de Datos", "Acepta Publicidad", "Carrera", "Modalidad", "Año que cursa", "Participante", "Edad"],
+      "columnas_ausentes": ["Acepta Participación"],
+      "notas": "Mismo esquema de 16 columnas ExitoESAN; sin columna Acepta Participación."
+    },
+    {
+      "formulario": "BECA BCP",
+      "verificado_con": "captura comparativa (no archivo real todavia)",
+      "columnas_origen_detectadas": ["Fecha de Registro", "Nombre", "Apellido Paterno", "Apellido Materno", "DNI", "Celular", "Correo Electrónico", "Información de Cookie", "Acepta Trámite de Datos", "Acepta Publicidad", "Carrera", "Año que cursa", "Participante", "Acepta Participación"],
+      "columnas_ausentes": ["Modalidad", "Edad"],
+      "notas": "Mismo esquema de 16 columnas ExitoESAN; sin Modalidad ni Edad."
+    },
+    {
+      "formulario": "Beca Huellas",
+      "verificado_con": "captura comparativa (no archivo real todavia)",
+      "columnas_origen_detectadas": ["Fecha de Registro", "Nombre", "Apellido Paterno", "Apellido Materno", "DNI", "Celular", "Correo Electrónico", "Información de Cookie", "Acepta Trámite de Datos", "Acepta Publicidad"],
+      "columnas_ausentes": ["Carrera", "Modalidad", "Año que cursa", "Participante", "Edad", "Acepta Participación"],
+      "notas": "Solo trae los datos de contacto basicos, sin nada de carrera/participante/edad."
+    }
+  ]
+}
