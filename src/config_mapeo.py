@@ -1,9 +1,9 @@
 import json
-from pathlib import Path
 
+from rutas import raiz_app
 from texto import normalizar
 
-RAIZ = Path(__file__).resolve().parent.parent
+RAIZ = raiz_app()
 RUTA_CONFIG = RAIZ / "config" / "alias_encabezados.json"
 RUTA_CATALOGO_FORMULARIOS = RAIZ / "config" / "nombres_hojas_conocidos.json"
 

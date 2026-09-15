@@ -1,7 +1,8 @@
 import ctypes
-from pathlib import Path
 
-CARPETA_FUENTES = Path(__file__).resolve().parent / "assets" / "fonts"
+from rutas import raiz_app
+
+CARPETA_FUENTES = raiz_app() / "src" / "assets" / "fonts"
 FR_PRIVATE = 0x10
 
 ROJO = "#f01830"

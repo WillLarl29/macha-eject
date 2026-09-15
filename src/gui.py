@@ -8,8 +8,9 @@ from tkinter import filedialog
 
 import estilo
 from consolidador import procesar_archivos
+from rutas import raiz_app
 
-RAIZ = Path(__file__).resolve().parent.parent
+RAIZ = raiz_app()
 RUTA_ICONO = RAIZ / "ico" / "macha.ico"
 
 

@@ -1,8 +1,8 @@
-from pathlib import Path
-
 import openpyxl
 
-RAIZ = Path(__file__).resolve().parent.parent
+from rutas import raiz_app
+
+RAIZ = raiz_app()
 RUTA_PLANTILLA = RAIZ / "plantilla" / "Encabezados.xlsx"
 
 
