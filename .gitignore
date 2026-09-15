@@ -8,3 +8,6 @@ salida/*.xlsx
 
 # Excels de muestra: pueden traer datos personales reales (nombres, DNI, correos, celulares)
 muestras/*.xlsx
+
+# Configuracion especifica del negocio (nombres de formularios, encabezados): no se publica
+config/*.json
