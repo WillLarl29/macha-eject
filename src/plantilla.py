@@ -3,7 +3,7 @@ import openpyxl
 from rutas import raiz_app
 
 RAIZ = raiz_app()
-RUTA_PLANTILLA = RAIZ / "plantilla" / "Encabezados.xlsx"
+RUTA_PLANTILLA = RAIZ / "plantilla" / "Plantilla-Pregrado.xlsx"
 
 
 def cargar_variables_plantilla(ruta=RUTA_PLANTILLA):

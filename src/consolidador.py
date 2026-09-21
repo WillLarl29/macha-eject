@@ -7,6 +7,7 @@ from encabezados import detectar_encabezados
 from mapeo import construir_fila_salida
 from nombre_hoja import generar_nombre_hoja
 from plantilla import cargar_variables_plantilla
+from procesos import PREGRADO
 
 
 NOMBRE_HOJA_GENERAL = "Consolidado General"
@@ -25,8 +26,11 @@ def _nombre_unico(nombre, usados):
         n += 1
 
 
-def procesar_archivos(rutas_entrada, on_evento=None):
+def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
     """Consolida los excels de rutas_entrada en un libro en memoria (no lo guarda).
+
+    proceso: descriptor (ver procesos.py) que indica que plantilla y
+    configuracion de mapeo usar (Pregrado, DPA, ...).
 
     on_evento(mensaje, tipo), si se pasa, se llama en tiempo real con el avance
     (tipo: "info", "advertencia" o "exito").
@@ -49,9 +53,9 @@ def procesar_archivos(rutas_entrada, on_evento=None):
         if on_evento:
             on_evento(mensaje, tipo)
 
-    variables_plantilla = cargar_variables_plantilla()
-    indice_alias = construir_indice_alias(cargar_config())
-    catalogo_formularios = cargar_catalogo_formularios()
+    variables_plantilla = cargar_variables_plantilla(proceso.ruta_plantilla)
+    indice_alias = construir_indice_alias(cargar_config(proceso.ruta_config))
+    catalogo_formularios = cargar_catalogo_formularios(proceso.ruta_catalogo)
     indice_dni = variables_plantilla.index("DNI")
 
     wb_salida = openpyxl.Workbook()
@@ -94,7 +98,15 @@ def procesar_archivos(rutas_entrada, on_evento=None):
             if all(celda.value is None for celda in fila):
                 continue
             valores_fila = {celda.column: celda.value for celda in fila}
-            fila_salida = construir_fila_salida(valores_fila, mapeo, variables_plantilla, nombre_hoja)
+            fila_salida = construir_fila_salida(
+                valores_fila, mapeo, variables_plantilla, nombre_hoja,
+                campo_fecha_registro=proceso.campo_fecha_registro,
+                variable_fecha_hora_completa=proceso.variable_fecha_hora_completa,
+                variable_fecha=proceso.variable_fecha,
+                variable_dia=proceso.variable_dia,
+                variable_mes=proceso.variable_mes,
+                variable_anio=proceso.variable_anio,
+            )
 
             dni = fila_salida[indice_dni]
             if dni is not None and str(dni).strip() != "":

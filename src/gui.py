@@ -3,11 +3,13 @@ import queue
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog
 
 import estilo
 from consolidador import procesar_archivos
+from procesos import PREGRADO
 from rutas import raiz_app
 
 RAIZ = raiz_app()
@@ -118,13 +120,14 @@ class FilaArchivo(tk.Frame):
 
 
 class VentanaPrincipal(tk.Tk):
-    def __init__(self):
+    def __init__(self, proceso=PREGRADO):
         super().__init__()
         estilo.registrar_fuentes()
 
+        self.proceso = proceso
         self.ANCHO_VENTANA = 1040
 
-        self.title("MACHA - Consolidador de Excels")
+        self.title(f"{proceso.titulo} - {proceso.subtitulo}")
         self.minsize(700, 200)
         self.configure(bg=estilo.BLANCO)
         if RUTA_ICONO.exists():
@@ -133,7 +136,12 @@ class VentanaPrincipal(tk.Tk):
         self.rutas_entrada = []
         self.libro_generado = None
         self.ruta_salida_generada = None
+        self.fecha_generacion = None
+        self.volver_seleccionado = False
         self.cola = queue.Queue()
+        self._id_after_cola = None
+
+        self.protocol("WM_DELETE_WINDOW", self._cerrar)
 
         self._construir_area_scroll()
         self._construir_widgets()
@@ -249,8 +257,9 @@ class VentanaPrincipal(tk.Tk):
 
         encabezado = tk.Frame(columna_izquierda, bg=estilo.BLANCO)
         encabezado.pack(fill="x", pady=(0, 10))
-        tk.Label(encabezado, text="MACHA", bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.TITULOS_BOLD, 20, "bold")).pack(anchor="w")
-        tk.Label(encabezado, text="Consolidador de Excels", bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.BASE, 11)).pack(anchor="w")
+        self._boton_marco_rojo(encabezado, "← Volver", self._volver).pack(anchor="w", pady=(0, 10))
+        tk.Label(encabezado, text=self.proceso.titulo, bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.TITULOS_BOLD, 20, "bold")).pack(anchor="w")
+        tk.Label(encabezado, text=self.proceso.subtitulo, bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.BASE, 11)).pack(anchor="w")
 
         panel_archivos = self._panel(columna_izquierda, "1. Archivos de entrada")
         fila = tk.Frame(panel_archivos, bg=estilo.BLANCO)
@@ -367,6 +376,7 @@ class VentanaPrincipal(tk.Tk):
         self.panel_log.pack_forget()
         self.libro_generado = None
         self.ruta_salida_generada = None
+        self.fecha_generacion = datetime.now()
         self.btn_guardar_abrir.config(text="Guardar consolidado...", state="disabled")
         self.texto_log.config(state="normal")
         self.texto_log.delete("1.0", "end")
@@ -375,14 +385,14 @@ class VentanaPrincipal(tk.Tk):
         rutas = list(self.rutas_entrada)
         hilo = threading.Thread(target=self._procesar_en_hilo, args=(rutas,), daemon=True)
         hilo.start()
-        self.after(100, self._revisar_cola)
+        self._id_after_cola = self.after(100, self._revisar_cola)
 
     def _procesar_en_hilo(self, rutas):
         def on_evento(mensaje, tipo="info"):
             self.cola.put(("log", mensaje, tipo))
 
         try:
-            libro, resultado = procesar_archivos(rutas, on_evento=on_evento)
+            libro, resultado = procesar_archivos(rutas, on_evento=on_evento, proceso=self.proceso)
             self.cola.put(("resultado", (libro, resultado), None))
         except Exception as error:
             self.cola.put(("error", str(error), None))
@@ -406,7 +416,7 @@ class VentanaPrincipal(tk.Tk):
                     self.boton_generar.config(state="normal")
         except queue.Empty:
             pass
-        self.after(100, self._revisar_cola)
+        self._id_after_cola = self.after(100, self._revisar_cola)
 
     def _escribir_log(self, mensaje, tipo="info"):
         self.texto_log.config(state="normal")
@@ -433,9 +443,11 @@ class VentanaPrincipal(tk.Tk):
             os.startfile(self.ruta_salida_generada)
             return
 
+        fecha = (self.fecha_generacion or datetime.now()).strftime("%Y-%m-%d")
+        nombre_inicial = f"{self.proceso.prefijo_salida}-{fecha}.xlsx"
         ruta = filedialog.asksaveasfilename(
             title="Guardar consolidado como", defaultextension=".xlsx",
-            filetypes=[("Archivo Excel", "*.xlsx")], initialfile="Consolidado.xlsx",
+            filetypes=[("Archivo Excel", "*.xlsx")], initialfile=nombre_inicial,
         )
         if not ruta:
             return
@@ -450,7 +462,33 @@ class VentanaPrincipal(tk.Tk):
         else:
             self.panel_log.pack(fill="both", expand=True, pady=(0, 14))
 
+    # -- navegacion ---------------------------------------------------------
 
-def iniciar():
-    app = VentanaPrincipal()
+    def _cancelar_polling(self):
+        """Cancela el after() pendiente de _revisar_cola antes de destruir la
+        ventana: si no se cancela, puede dispararse despues de destroy() (p.ej.
+        ya con otra ventana de proceso abierta) y romper con
+        'invalid command name ..._revisar_cola'."""
+        if self._id_after_cola is not None:
+            try:
+                self.after_cancel(self._id_after_cola)
+            except tk.TclError:
+                pass
+            self._id_after_cola = None
+
+    def _volver(self):
+        self._cancelar_polling()
+        self.volver_seleccionado = True
+        self.destroy()
+
+    def _cerrar(self):
+        self._cancelar_polling()
+        self.destroy()
+
+
+def iniciar(proceso=PREGRADO):
+    """Abre la ventana principal para el proceso dado y devuelve True si el
+    usuario pidio volver al selector de procesos, o False si cerro la ventana."""
+    app = VentanaPrincipal(proceso)
     app.mainloop()
+    return app.volver_seleccionado
