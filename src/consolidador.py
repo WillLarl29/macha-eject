@@ -9,6 +9,9 @@ from nombre_hoja import generar_nombre_hoja
 from plantilla import cargar_variables_plantilla
 
 
+NOMBRE_HOJA_GENERAL = "Consolidado General"
+
+
 def _nombre_unico(nombre, usados):
     if nombre not in usados:
         usados.add(nombre)
@@ -53,9 +56,10 @@ def procesar_archivos(rutas_entrada, on_evento=None):
 
     wb_salida = openpyxl.Workbook()
     wb_salida.remove(wb_salida.active)
-    nombres_usados = set()
+    nombres_usados = {NOMBRE_HOJA_GENERAL}
     advertencias = []
     archivos_resultado = []
+    filas_generales = []
     total_filas = 0
     total_duplicados = 0
 
@@ -101,6 +105,7 @@ def procesar_archivos(rutas_entrada, on_evento=None):
                 dnis_vistos.add(clave_dni)
 
             ws_salida.append(fila_salida)
+            filas_generales.append(fila_salida)
             filas_agregadas += 1
 
         if dnis_duplicados:
@@ -123,6 +128,12 @@ def procesar_archivos(rutas_entrada, on_evento=None):
         total_filas += filas_agregadas
         total_duplicados += len(dnis_duplicados)
         wb_entrada.close()
+
+    ws_general = wb_salida.create_sheet(title=NOMBRE_HOJA_GENERAL, index=0)
+    ws_general.append(variables_plantilla)
+    for fila_salida in filas_generales:
+        ws_general.append(fila_salida)
+    emitir(f"-> hoja '{NOMBRE_HOJA_GENERAL}': {len(filas_generales)} fila(s) agregadas.")
 
     emitir("Consolidado generado en memoria. Elige donde guardarlo.", "exito")
 
