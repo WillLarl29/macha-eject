@@ -8,9 +8,31 @@ from mapeo import construir_fila_salida
 from nombre_hoja import generar_nombre_hoja
 from plantilla import cargar_variables_plantilla
 from procesos import PREGRADO
+from texto import normalizar
 
 
 NOMBRE_HOJA_GENERAL = "Consolidado General"
+
+CAMPOS_REVISION_PRUEBA = ["NOMBRE", "AP. PATERNO", "APE. MATERNO", "DNI", "CORREO"]
+
+
+def _indices_revision_prueba(variables_plantilla):
+    return [
+        (campo, variables_plantilla.index(campo))
+        for campo in CAMPOS_REVISION_PRUEBA
+        if campo in variables_plantilla
+    ]
+
+
+def _detectar_prueba(fila_salida, indices_prueba):
+    """Devuelve una descripcion 'CAMPO: valor' del primer campo donde aparece
+    la palabra PRUEBA (con o sin numeros pegados, ej. PRUEBA24), o None si no
+    se encontro en ninguno de los campos revisados."""
+    for campo, indice in indices_prueba:
+        valor = fila_salida[indice]
+        if valor is not None and "PRUEBA" in normalizar(valor):
+            return f"{campo}: {valor}"
+    return None
 
 
 def _nombre_unico(nombre, usados):
@@ -41,9 +63,11 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
       {
         "total_filas": int,
         "total_duplicados": int,
+        "total_prueba": int,
         "advertencias": [str, ...],
         "archivos": [
-          {"archivo": str, "hoja": str, "filas": int, "duplicados_dni": [str, ...]},
+          {"archivo": str, "hoja": str, "filas": int, "duplicados_dni": [str, ...],
+           "registros_prueba": [str, ...]},
           ...
         ],
       }
@@ -57,6 +81,7 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
     indice_alias = construir_indice_alias(cargar_config(proceso.ruta_config))
     catalogo_formularios = cargar_catalogo_formularios(proceso.ruta_catalogo)
     indice_dni = variables_plantilla.index("DNI")
+    indices_prueba = _indices_revision_prueba(variables_plantilla)
 
     wb_salida = openpyxl.Workbook()
     wb_salida.remove(wb_salida.active)
@@ -66,6 +91,7 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
     filas_generales = []
     total_filas = 0
     total_duplicados = 0
+    total_prueba = 0
 
     for ruta in rutas_entrada:
         ruta = Path(ruta)
@@ -93,6 +119,7 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
 
         dnis_vistos = set()
         dnis_duplicados = []
+        registros_prueba = []
         filas_agregadas = 0
         for fila in ws.iter_rows(min_row=fila_encabezado + 1):
             if all(celda.value is None for celda in fila):
@@ -108,6 +135,11 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
                 variable_anio=proceso.variable_anio,
             )
 
+            deteccion_prueba = _detectar_prueba(fila_salida, indices_prueba)
+            if deteccion_prueba is not None:
+                registros_prueba.append(deteccion_prueba)
+                continue
+
             dni = fila_salida[indice_dni]
             if dni is not None and str(dni).strip() != "":
                 clave_dni = str(dni).strip()
@@ -119,6 +151,14 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
             ws_salida.append(fila_salida)
             filas_generales.append(fila_salida)
             filas_agregadas += 1
+
+        if registros_prueba:
+            mensaje = (
+                f"{nombre_hoja}: se descartaron {len(registros_prueba)} fila(s) por "
+                "contener 'PRUEBA' en nombre, apellidos, DNI o correo."
+            )
+            advertencias.append(mensaje)
+            emitir(mensaje, "advertencia")
 
         if dnis_duplicados:
             mensaje = (
@@ -135,10 +175,12 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
                 "hoja": nombre_hoja,
                 "filas": filas_agregadas,
                 "duplicados_dni": dnis_duplicados,
+                "registros_prueba": registros_prueba,
             }
         )
         total_filas += filas_agregadas
         total_duplicados += len(dnis_duplicados)
+        total_prueba += len(registros_prueba)
         wb_entrada.close()
 
     ws_general = wb_salida.create_sheet(title=NOMBRE_HOJA_GENERAL, index=0)
@@ -152,6 +194,7 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
     resultado = {
         "total_filas": total_filas,
         "total_duplicados": total_duplicados,
+        "total_prueba": total_prueba,
         "advertencias": advertencias,
         "archivos": archivos_resultado,
     }

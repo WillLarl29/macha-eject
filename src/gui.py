@@ -72,11 +72,17 @@ class FilaArchivo(tk.Frame):
             font=(estilo.DATOS, 10), anchor="w",
         ).pack(side="left")
 
-        cantidad = len(datos["duplicados_dni"])
-        if cantidad > 0:
-            texto_etiqueta, color_etiqueta = f"{cantidad} duplicados removidos", estilo.ROJO
+        cantidad_dup = len(datos["duplicados_dni"])
+        cantidad_prueba = len(datos.get("registros_prueba", []))
+        partes_etiqueta = []
+        if cantidad_dup > 0:
+            partes_etiqueta.append(f"{cantidad_dup} duplicados")
+        if cantidad_prueba > 0:
+            partes_etiqueta.append(f"{cantidad_prueba} de prueba")
+        if partes_etiqueta:
+            texto_etiqueta, color_etiqueta = " · ".join(partes_etiqueta) + " removidos", estilo.ROJO
         else:
-            texto_etiqueta, color_etiqueta = "0 duplicados", estilo.NEGRO
+            texto_etiqueta, color_etiqueta = "0 removidos", estilo.NEGRO
 
         self.chevron = tk.Label(cabecera, text="⌄", bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.TITULOS_MEDIUM, 11))
         self.chevron.pack(side="right")
@@ -86,11 +92,11 @@ class FilaArchivo(tk.Frame):
         ).pack(side="right", padx=(0, 8))
 
         self.cuerpo = tk.Frame(self, bg=estilo.BLANCO)
-        if cantidad > 0:
+        if cantidad_dup > 0:
             primeros = datos["duplicados_dni"][:3]
             tk.Label(
                 self.cuerpo,
-                text=f"DNI duplicados descartados (primeros {len(primeros)} de {cantidad}):",
+                text=f"DNI duplicados descartados (primeros {len(primeros)} de {cantidad_dup}):",
                 bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.BASE, 9), anchor="w",
             ).pack(fill="x", padx=12, pady=(0, 4))
             for dni in primeros:
@@ -99,9 +105,24 @@ class FilaArchivo(tk.Frame):
                     font=(estilo.DATOS, 10), highlightthickness=1, highlightbackground=estilo.ROJO,
                     padx=8, pady=4, anchor="w",
                 ).pack(fill="x", padx=12, pady=2)
-        else:
+
+        if cantidad_prueba > 0:
+            primeros_prueba = datos["registros_prueba"][:3]
             tk.Label(
-                self.cuerpo, text="Sin duplicados en este archivo.", bg=estilo.BLANCO,
+                self.cuerpo,
+                text=f"Descartados por 'PRUEBA' (primeros {len(primeros_prueba)} de {cantidad_prueba}):",
+                bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.BASE, 9), anchor="w",
+            ).pack(fill="x", padx=12, pady=(0, 4))
+            for descripcion in primeros_prueba:
+                tk.Label(
+                    self.cuerpo, text=str(descripcion), bg=estilo.BLANCO, fg=estilo.NEGRO,
+                    font=(estilo.DATOS, 10), highlightthickness=1, highlightbackground=estilo.ROJO,
+                    padx=8, pady=4, anchor="w",
+                ).pack(fill="x", padx=12, pady=2)
+
+        if cantidad_dup == 0 and cantidad_prueba == 0:
+            tk.Label(
+                self.cuerpo, text="Sin registros removidos en este archivo.", bg=estilo.BLANCO,
                 fg=estilo.NEGRO, font=(estilo.BASE, 9), anchor="w",
             ).pack(fill="x", padx=12, pady=(0, 8))
 
@@ -315,9 +336,11 @@ class VentanaPrincipal(tk.Tk):
         fila_pills = tk.Frame(self.marco_resultado_real, bg=estilo.BLANCO)
         fila_pills.pack(fill="x", padx=14, pady=12)
         self.pill_filas = Pill(fila_pills, "Filas Consolidadas:")
-        self.pill_filas.pack(side="left", padx=(0, 8))
+        self.pill_filas.pack(anchor="w", pady=(0, 6))
         self.pill_duplicados = Pill(fila_pills, "Total Duplicados Removidos:", color_valor=estilo.ROJO)
-        self.pill_duplicados.pack(side="left")
+        self.pill_duplicados.pack(anchor="w", pady=(0, 6))
+        self.pill_prueba = Pill(fila_pills, "Total Registros de Prueba Removidos:", color_valor=estilo.ROJO)
+        self.pill_prueba.pack(anchor="w")
 
         tk.Label(
             self.marco_resultado_real, text="Detalle por archivo", bg=estilo.BLANCO, fg=estilo.NEGRO,
@@ -428,6 +451,7 @@ class VentanaPrincipal(tk.Tk):
         self.libro_generado = libro
         self.pill_filas.actualizar(f"{resultado['total_filas']:,}")
         self.pill_duplicados.actualizar(f"{resultado['total_duplicados']:,}")
+        self.pill_prueba.actualizar(f"{resultado['total_prueba']:,}")
 
         for widget in self.contenedor_acordeon.winfo_children():
             widget.destroy()
