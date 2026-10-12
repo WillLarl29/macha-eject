@@ -32,7 +32,7 @@ PREGRADO = Proceso(
     titulo="MACHA",
     subtitulo="Consolidador de Excels - Pregrado",
     prefijo_salida="Consolidado-Pregrado",
-    ruta_plantilla=RAIZ / "plantilla" / "Plantilla-Pregrado.xlsx",
+    ruta_plantilla=RAIZ / "plantilla" / "Plantilla-PregradoV2.xlsx",
     ruta_config=RAIZ / "config" / "alias_encabezados.json",
     ruta_catalogo=RAIZ / "config" / "nombres_hojas_conocidos.json",
 )
