@@ -24,6 +24,8 @@ def construir_fila_salida(
     variable_dia="DIA",
     variable_mes="MES",
     variable_anio="AÑO",
+    campo_fecha_evento=None,
+    variable_mes_evento=None,
 ):
     """Arma una fila de salida en el orden de variables_plantilla.
 
@@ -34,10 +36,20 @@ def construir_fila_salida(
     Las variable_* indican en que columna de la plantilla va cada dato derivado
     de esa fecha, ya que su nombre difiere entre plantillas (ej. Pregrado usa
     "FECHA DE REGISTRO2" y DPA usa "FECHA EXACTA" para la fecha/hora completa).
+    campo_fecha_evento/variable_mes_evento: igual que campo_fecha_registro, pero
+    para una segunda fecha independiente (ej. Pregrado V3 calcula MES DEL EVENTO
+    a partir de FECHA CHARLA, que es un campo mapeado aparte). Si campo_fecha_evento
+    es None, no se calcula nada para variable_mes_evento.
     """
     col_fecha_registro = mapeo.get(campo_fecha_registro)
     crudo_fecha_registro = valores_fila.get(col_fecha_registro) if col_fecha_registro else None
     fecha_dt = parsear_fecha(crudo_fecha_registro)
+
+    fecha_evento_dt = None
+    if campo_fecha_evento:
+        col_fecha_evento = mapeo.get(campo_fecha_evento)
+        crudo_fecha_evento = valores_fila.get(col_fecha_evento) if col_fecha_evento else None
+        fecha_evento_dt = parsear_fecha(crudo_fecha_evento)
 
     fila_salida = []
     for variable in variables_plantilla:
@@ -53,6 +65,8 @@ def construir_fila_salida(
             valor = fecha_dt.month if fecha_dt else None
         elif variable == variable_anio:
             valor = fecha_dt.year if fecha_dt else None
+        elif variable_mes_evento is not None and variable == variable_mes_evento:
+            valor = fecha_evento_dt.month if fecha_evento_dt else None
         else:
             col = mapeo.get(variable)
             valor = valores_fila.get(col) if col else None

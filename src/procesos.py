@@ -25,6 +25,8 @@ class Proceso:
     variable_dia: str = "DIA"
     variable_mes: str = "MES"
     variable_anio: str = "AÑO"
+    campo_fecha_evento: str | None = None
+    variable_mes_evento: str | None = None
 
 
 PREGRADO = Proceso(
@@ -32,9 +34,11 @@ PREGRADO = Proceso(
     titulo="MACHA",
     subtitulo="Consolidador de Excels - Pregrado",
     prefijo_salida="Consolidado-Pregrado",
-    ruta_plantilla=RAIZ / "plantilla" / "Plantilla-PregradoV2.xlsx",
+    ruta_plantilla=RAIZ / "plantilla" / "Plantilla-PregradoV3.xlsx",
     ruta_config=RAIZ / "config" / "alias_encabezados.json",
     ruta_catalogo=RAIZ / "config" / "nombres_hojas_conocidos.json",
+    campo_fecha_evento="FECHA CHARLA",
+    variable_mes_evento="MES DEL EVENTO",
 )
 
 DPA = Proceso(

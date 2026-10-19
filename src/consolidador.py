@@ -133,6 +133,8 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
                 variable_dia=proceso.variable_dia,
                 variable_mes=proceso.variable_mes,
                 variable_anio=proceso.variable_anio,
+                campo_fecha_evento=proceso.campo_fecha_evento,
+                variable_mes_evento=proceso.variable_mes_evento,
             )
 
             deteccion_prueba = _detectar_prueba(fila_salida, indices_prueba)
