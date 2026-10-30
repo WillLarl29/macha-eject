@@ -1,6 +1,6 @@
 from datetime import datetime
 
-FORMATOS_FECHA_CONOCIDOS = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
+FORMATOS_FECHA_CONOCIDOS = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"]
 
 
 def parsear_fecha(valor):
@@ -51,24 +51,29 @@ def construir_fila_salida(
         crudo_fecha_evento = valores_fila.get(col_fecha_evento) if col_fecha_evento else None
         fecha_evento_dt = parsear_fecha(crudo_fecha_evento)
 
+    def _directo(variable):
+        """Valor tomado directo de una columna de origen con ese mismo nombre
+        de variable, si existe (fallback quando la fecha no se pudo calcular)."""
+        col = mapeo.get(variable)
+        return valores_fila.get(col) if col else None
+
     fila_salida = []
     for variable in variables_plantilla:
         if variable == "FORMULARIO":
             valor = nombre_hoja
         elif variable == variable_fecha_hora_completa:
-            valor = crudo_fecha_registro
+            valor = crudo_fecha_registro if crudo_fecha_registro is not None else _directo(variable)
         elif variable == variable_fecha:
-            valor = fecha_dt.date() if fecha_dt else None
+            valor = fecha_dt.date() if fecha_dt else _directo(variable)
         elif variable == variable_dia:
-            valor = fecha_dt.day if fecha_dt else None
+            valor = fecha_dt.day if fecha_dt else _directo(variable)
         elif variable == variable_mes:
-            valor = fecha_dt.month if fecha_dt else None
+            valor = fecha_dt.month if fecha_dt else _directo(variable)
         elif variable == variable_anio:
-            valor = fecha_dt.year if fecha_dt else None
+            valor = fecha_dt.year if fecha_dt else _directo(variable)
         elif variable_mes_evento is not None and variable == variable_mes_evento:
-            valor = fecha_evento_dt.month if fecha_evento_dt else None
+            valor = fecha_evento_dt.month if fecha_evento_dt else _directo(variable)
         else:
-            col = mapeo.get(variable)
-            valor = valores_fila.get(col) if col else None
+            valor = _directo(variable)
         fila_salida.append(valor)
     return fila_salida

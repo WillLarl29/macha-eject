@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
+import dpa_especial as _dpa_especial
 from rutas import raiz_app
 
 RAIZ = raiz_app()
@@ -27,6 +29,11 @@ class Proceso:
     variable_anio: str = "AÑO"
     campo_fecha_evento: str | None = None
     variable_mes_evento: str | None = None
+    # Ajustes extra, por proceso, sobre una fila ya mapeada (ver dpa_especial.py).
+    postprocesar: Callable | None = None
+    # Estrategia alterna para nombre de hoja/FORMULARIO (por defecto: nombre de
+    # archivo + catalogo, via nombre_hoja.generar_nombre_hoja).
+    detectar_nombre_hoja: Callable | None = None
 
 
 PREGRADO = Proceso(
@@ -50,4 +57,10 @@ DPA = Proceso(
     ruta_config=RAIZ / "config" / "alias_encabezados_dpa.json",
     ruta_catalogo=RAIZ / "config" / "nombres_hojas_conocidos_dpa.json",
     variable_fecha_hora_completa="FECHA EXACTA",
+    # Soporta tambien los formatos BO/Joomla con 'campos extra' combinado (ver
+    # plantilla/Caso_Especial.xlsx); son no-op en los formularios normales de
+    # DPA porque sus columnas auxiliares (Nombre 2, Campos Extra, Nombre del
+    # Evento) no existen ahi.
+    postprocesar=_dpa_especial.postprocesar,
+    detectar_nombre_hoja=_dpa_especial.detectar_nombre_hoja,
 )

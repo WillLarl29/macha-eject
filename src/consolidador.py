@@ -107,7 +107,12 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
             wb_entrada.close()
             continue
 
-        nombre_base, reconocido = generar_nombre_hoja(ruta.name, catalogo_formularios)
+        if proceso.detectar_nombre_hoja:
+            nombre_base, reconocido = proceso.detectar_nombre_hoja(
+                ws, mapeo, fila_encabezado, ruta.name, catalogo_formularios
+            )
+        else:
+            nombre_base, reconocido = generar_nombre_hoja(ruta.name, catalogo_formularios)
         if not reconocido:
             mensaje = f"{ruta.name}: nombre de formulario no catalogado, se uso '{nombre_base}'."
             advertencias.append(mensaje)
@@ -136,6 +141,8 @@ def procesar_archivos(rutas_entrada, on_evento=None, proceso=PREGRADO):
                 campo_fecha_evento=proceso.campo_fecha_evento,
                 variable_mes_evento=proceso.variable_mes_evento,
             )
+            if proceso.postprocesar:
+                fila_salida = proceso.postprocesar(valores_fila, mapeo, fila_salida, variables_plantilla)
 
             deteccion_prueba = _detectar_prueba(fila_salida, indices_prueba)
             if deteccion_prueba is not None:
