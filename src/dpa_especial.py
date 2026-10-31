@@ -1,10 +1,7 @@
 import re
 
-from nombre_hoja import generar_nombre_hoja, sanear
-
 VARIABLE_CAMPOS_EXTRA = "CAMPOS EXTRA"
 VARIABLE_NOMBRE_2 = "NOMBRE 2"
-VARIABLE_NOMBRE_DEL_EVENTO = "NOMBRE DEL EVENTO"
 
 PATRON_LINEA_CAMPO_EXTRA = re.compile(r"^\s*([A-Za-z_]+)\s*:\s*(.*)$")
 
@@ -66,23 +63,3 @@ def postprocesar(valores_fila, mapeo, fila_salida, variables_plantilla):
                 fila_salida[i_variable] = valores_extra[etiqueta]
 
     return fila_salida
-
-
-def detectar_nombre_hoja(ws, mapeo, fila_encabezado, nombre_archivo, catalogo_formularios):
-    """Determina el nombre de hoja/FORMULARIO a partir de los datos del archivo
-    en vez de su nombre: usa 'Nombre del Evento' (formato BO) o 'FORMULARIO'
-    (formato Joomla, que ya trae esa columna), tomando el valor de la primera
-    fila de datos. Si ninguna columna aparece, cae al metodo por nombre de
-    archivo + catalogo (igual que Pregrado/DPA)."""
-    primera_fila = next(ws.iter_rows(min_row=fila_encabezado + 1, max_row=fila_encabezado + 1), None)
-    if primera_fila is not None:
-        valores_primera_fila = {celda.column: celda.value for celda in primera_fila}
-        for variable in (VARIABLE_NOMBRE_DEL_EVENTO, "FORMULARIO"):
-            col = mapeo.get(variable)
-            if col is None:
-                continue
-            valor = valores_primera_fila.get(col)
-            if valor is not None and str(valor).strip():
-                return sanear(str(valor).strip()), True
-
-    return generar_nombre_hoja(nombre_archivo, catalogo_formularios)

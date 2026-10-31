@@ -58,9 +58,12 @@ DPA = Proceso(
     ruta_catalogo=RAIZ / "config" / "nombres_hojas_conocidos_dpa.json",
     variable_fecha_hora_completa="FECHA EXACTA",
     # Soporta tambien los formatos BO/Joomla con 'campos extra' combinado (ver
-    # plantilla/Caso_Especial.xlsx); son no-op en los formularios normales de
-    # DPA porque sus columnas auxiliares (Nombre 2, Campos Extra, Nombre del
-    # Evento) no existen ahi.
+    # plantilla/Caso_Especial.xlsx): separa ESTUDIOS SUPERIORES/MODALIDAD/
+    # CARRERA DE INTERES y combina Nombre 1 + Nombre 2. Es no-op en los
+    # formularios normales de DPA porque esas columnas auxiliares no existen
+    # ahi. El nombre de hoja/FORMULARIO SIEMPRE sale del nombre de archivo +
+    # catalogo (no de columnas como 'Nombre del Evento'/'FORMULARIO' del
+    # archivo de origen, que pueden venir desactualizadas y generar hojas
+    # duplicadas para el mismo evento).
     postprocesar=_dpa_especial.postprocesar,
-    detectar_nombre_hoja=_dpa_especial.detectar_nombre_hoja,
 )
