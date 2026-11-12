@@ -467,6 +467,8 @@ class VentanaPrincipal(tk.Tk):
                 sugerido, reconocido = sugerir_nombre_evento(ruta, self.proceso)
                 if sugerido not in self.eventos_conocidos:
                     self.eventos_conocidos.append(sugerido)
+                    for fila_widget in self.filas_archivo_widgets:
+                        fila_widget.agregar_opcion(sugerido)
                 fila_widget = FilaArchivoEntrada(
                     self.marco_lista_archivos, ruta, sugerido, reconocido,
                     self.eventos_conocidos, self._pedir_nuevo_evento, self._quitar_fila_archivo,
