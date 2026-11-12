@@ -5,10 +5,10 @@ import tkinter as tk
 import tkinter.font as tkfont
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog
+from tkinter import filedialog, simpledialog, ttk
 
 import estilo
-from consolidador import procesar_archivos
+from consolidador import confirmar_grupos_archivo, listar_eventos_conocidos, procesar_archivos, sugerir_nombre_evento
 from procesos import PREGRADO
 from rutas import raiz_app
 
@@ -140,12 +140,79 @@ class FilaArchivo(tk.Frame):
             self.chevron.config(text="⌄")
 
 
+class FilaArchivoEntrada(tk.Frame):
+    """Fila de la lista de archivos de entrada en procesos que agrupan
+    eventos (DPA): muestra el nombre de archivo y un desplegable 'Grupo' para
+    elegir a que evento pertenece (varios archivos con el mismo grupo se
+    fusionan en una sola hoja al generar, con DNI duplicado detectado entre
+    ellos)."""
+
+    OPCION_NUEVO = "+ Nuevo evento..."
+
+    def __init__(self, master, ruta, sugerido, reconocido, eventos_conocidos, on_nuevo_evento, on_quitar):
+        super().__init__(master, bg=estilo.BLANCO, highlightthickness=1, highlightbackground=estilo.ROJO)
+        self.ruta = ruta
+        self.sugerido_original = sugerido
+        self.reconocido_original = reconocido
+        self._on_nuevo_evento = on_nuevo_evento
+
+        tk.Label(
+            self, text=Path(ruta).name, bg=estilo.BLANCO, fg=estilo.NEGRO,
+            font=(estilo.DATOS, 9), anchor="w",
+        ).pack(side="left", fill="x", expand=True, padx=(8, 6), pady=6)
+
+        self._boton_quitar = tk.Label(
+            self, text="✕", bg=estilo.BLANCO, fg=estilo.ROJO, font=(estilo.TITULOS_MEDIUM, 10),
+            cursor="hand2",
+        )
+        self._boton_quitar.pack(side="right", padx=(6, 8))
+        self._boton_quitar.bind("<Button-1>", lambda _e: on_quitar(self))
+
+        opciones = [sugerido] if sugerido else []
+        for evento in eventos_conocidos:
+            if evento not in opciones:
+                opciones.append(evento)
+        opciones.append(self.OPCION_NUEVO)
+
+        self.combo = ttk.Combobox(self, values=opciones, state="readonly", width=24, font=(estilo.BASE, 9))
+        self.combo.set(sugerido)
+        self.combo.pack(side="right", padx=(0, 6), pady=6)
+        self.combo.bind("<<ComboboxSelected>>", self._al_elegir)
+
+    def agregar_opcion(self, nombre_evento):
+        valores = list(self.combo["values"])
+        if nombre_evento not in valores:
+            valores.insert(len(valores) - 1, nombre_evento)
+            self.combo["values"] = valores
+
+    def _al_elegir(self, _evento=None):
+        if self.combo.get() == self.OPCION_NUEVO:
+            nombre = self._on_nuevo_evento()
+            if nombre:
+                self.agregar_opcion(nombre)
+                self.combo.set(nombre)
+            else:
+                self.combo.set(self.sugerido_original)
+
+    def valor_grupo(self):
+        return self.combo.get()
+
+    def fue_modificado(self):
+        """True si hay que guardar esta asignacion para la proxima vez: no se
+        reconocio automaticamente, o el usuario eligio un grupo distinto al
+        sugerido."""
+        return (not self.reconocido_original) or (self.valor_grupo() != self.sugerido_original)
+
+
 class VentanaPrincipal(tk.Tk):
     def __init__(self, proceso=PREGRADO):
         super().__init__()
         estilo.registrar_fuentes()
 
         self.proceso = proceso
+        self.usa_grupos = proceso.agrupar_archivos
+        self.filas_archivo_widgets = []
+        self.eventos_conocidos = listar_eventos_conocidos(proceso)
         self.ANCHO_VENTANA = 1040
 
         self.title(f"{proceso.titulo} - {proceso.subtitulo}")
@@ -282,19 +349,38 @@ class VentanaPrincipal(tk.Tk):
         tk.Label(encabezado, text=self.proceso.titulo, bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.TITULOS_BOLD, 20, "bold")).pack(anchor="w")
         tk.Label(encabezado, text=self.proceso.subtitulo, bg=estilo.BLANCO, fg=estilo.NEGRO, font=(estilo.BASE, 11)).pack(anchor="w")
 
-        panel_archivos = self._panel(columna_izquierda, "1. Archivos de entrada")
+        titulo_archivos = "1. Archivos de entrada" if not self.usa_grupos else (
+            "1. Archivos de entrada (elige el Grupo/evento de cada uno)"
+        )
+        panel_archivos = self._panel(columna_izquierda, titulo_archivos)
         fila = tk.Frame(panel_archivos, bg=estilo.BLANCO)
         fila.pack(fill="x", padx=14, pady=(0, 14))
-        self.lista_archivos = tk.Listbox(
-            fila, height=6, selectmode="extended", font=(estilo.DATOS, 10),
-            highlightthickness=1, highlightbackground=estilo.ROJO, bd=0,
-        )
-        self.lista_archivos.pack(side="left", fill="both", expand=True)
-        columna_botones = tk.Frame(fila, bg=estilo.BLANCO)
-        columna_botones.pack(side="left", fill="y", padx=(10, 0))
-        self._boton_marco_rojo(columna_botones, "Agregar...", self._agregar_archivos).pack(fill="x", pady=3)
-        self._boton_marco_rojo(columna_botones, "Quitar seleccionados", self._quitar_seleccionados).pack(fill="x", pady=3)
-        self._boton_marco_rojo(columna_botones, "Limpiar todo", self._limpiar_archivos).pack(fill="x", pady=3)
+
+        if self.usa_grupos:
+            self.marco_lista_archivos = tk.Frame(
+                fila, highlightthickness=1, highlightbackground=estilo.ROJO, bg=estilo.BLANCO,
+            )
+            self.marco_lista_archivos.pack(side="left", fill="both", expand=True)
+            self.label_sin_archivos = tk.Label(
+                self.marco_lista_archivos, text="Sin archivos agregados.", bg=estilo.BLANCO,
+                fg=estilo.NEGRO, font=(estilo.BASE, 9),
+            )
+            self.label_sin_archivos.pack(padx=12, pady=16)
+            columna_botones = tk.Frame(fila, bg=estilo.BLANCO)
+            columna_botones.pack(side="left", fill="y", padx=(10, 0))
+            self._boton_marco_rojo(columna_botones, "Agregar...", self._agregar_archivos).pack(fill="x", pady=3)
+            self._boton_marco_rojo(columna_botones, "Limpiar todo", self._limpiar_archivos).pack(fill="x", pady=3)
+        else:
+            self.lista_archivos = tk.Listbox(
+                fila, height=6, selectmode="extended", font=(estilo.DATOS, 10),
+                highlightthickness=1, highlightbackground=estilo.ROJO, bd=0,
+            )
+            self.lista_archivos.pack(side="left", fill="both", expand=True)
+            columna_botones = tk.Frame(fila, bg=estilo.BLANCO)
+            columna_botones.pack(side="left", fill="y", padx=(10, 0))
+            self._boton_marco_rojo(columna_botones, "Agregar...", self._agregar_archivos).pack(fill="x", pady=3)
+            self._boton_marco_rojo(columna_botones, "Quitar seleccionados", self._quitar_seleccionados).pack(fill="x", pady=3)
+            self._boton_marco_rojo(columna_botones, "Limpiar todo", self._limpiar_archivos).pack(fill="x", pady=3)
 
         self.boton_generar = self._boton(columna_izquierda, "2. Generar consolidado", self._generar, "primario")
         self.boton_generar.pack(fill="x", pady=(0, 14))
@@ -369,10 +455,51 @@ class VentanaPrincipal(tk.Tk):
         rutas = filedialog.askopenfilenames(
             title="Selecciona los Excels de entrada", filetypes=[("Archivos Excel", "*.xlsx")]
         )
-        for ruta in rutas:
-            if ruta not in self.rutas_entrada:
-                self.rutas_entrada.append(ruta)
+        nuevas = [ruta for ruta in rutas if ruta not in self.rutas_entrada]
+        if not nuevas:
+            return
+        self.rutas_entrada.extend(nuevas)
+
+        if self.usa_grupos:
+            if self.label_sin_archivos.winfo_manager():
+                self.label_sin_archivos.pack_forget()
+            for ruta in nuevas:
+                sugerido, reconocido = sugerir_nombre_evento(ruta, self.proceso)
+                if sugerido not in self.eventos_conocidos:
+                    self.eventos_conocidos.append(sugerido)
+                fila_widget = FilaArchivoEntrada(
+                    self.marco_lista_archivos, ruta, sugerido, reconocido,
+                    self.eventos_conocidos, self._pedir_nuevo_evento, self._quitar_fila_archivo,
+                )
+                fila_widget.pack(fill="x", padx=4, pady=3)
+                self.filas_archivo_widgets.append(fila_widget)
+        else:
+            for ruta in nuevas:
                 self.lista_archivos.insert("end", Path(ruta).name)
+        self._actualizar_boton_generar()
+
+    def _pedir_nuevo_evento(self):
+        nombre = simpledialog.askstring(
+            "Nuevo evento", "Nombre del nuevo evento:", parent=self,
+        )
+        if not nombre:
+            return None
+        nombre = nombre.strip()
+        if not nombre:
+            return None
+        if nombre not in self.eventos_conocidos:
+            self.eventos_conocidos.append(nombre)
+        for fila_widget in self.filas_archivo_widgets:
+            fila_widget.agregar_opcion(nombre)
+        return nombre
+
+    def _quitar_fila_archivo(self, fila_widget):
+        if fila_widget.ruta in self.rutas_entrada:
+            self.rutas_entrada.remove(fila_widget.ruta)
+        self.filas_archivo_widgets.remove(fila_widget)
+        fila_widget.destroy()
+        if not self.filas_archivo_widgets:
+            self.label_sin_archivos.pack(padx=12, pady=16)
         self._actualizar_boton_generar()
 
     def _quitar_seleccionados(self):
@@ -382,7 +509,13 @@ class VentanaPrincipal(tk.Tk):
         self._actualizar_boton_generar()
 
     def _limpiar_archivos(self):
-        self.lista_archivos.delete(0, "end")
+        if self.usa_grupos:
+            for fila_widget in self.filas_archivo_widgets:
+                fila_widget.destroy()
+            self.filas_archivo_widgets.clear()
+            self.label_sin_archivos.pack(padx=12, pady=16)
+        else:
+            self.lista_archivos.delete(0, "end")
         self.rutas_entrada.clear()
         self._actualizar_boton_generar()
 
@@ -406,16 +539,31 @@ class VentanaPrincipal(tk.Tk):
         self.texto_log.config(state="disabled")
 
         rutas = list(self.rutas_entrada)
-        hilo = threading.Thread(target=self._procesar_en_hilo, args=(rutas,), daemon=True)
+
+        grupos_por_archivo = None
+        self._grupos_a_confirmar = {}
+        if self.usa_grupos:
+            grupos_por_archivo = {}
+            for fila_widget in self.filas_archivo_widgets:
+                grupo = fila_widget.valor_grupo()
+                grupos_por_archivo[str(fila_widget.ruta)] = grupo
+                if fila_widget.fue_modificado():
+                    self._grupos_a_confirmar.setdefault(grupo, []).append(Path(fila_widget.ruta).stem)
+
+        hilo = threading.Thread(
+            target=self._procesar_en_hilo, args=(rutas, grupos_por_archivo), daemon=True,
+        )
         hilo.start()
         self._id_after_cola = self.after(100, self._revisar_cola)
 
-    def _procesar_en_hilo(self, rutas):
+    def _procesar_en_hilo(self, rutas, grupos_por_archivo):
         def on_evento(mensaje, tipo="info"):
             self.cola.put(("log", mensaje, tipo))
 
         try:
-            libro, resultado = procesar_archivos(rutas, on_evento=on_evento, proceso=self.proceso)
+            libro, resultado = procesar_archivos(
+                rutas, on_evento=on_evento, proceso=self.proceso, grupos_por_archivo=grupos_por_archivo,
+            )
             self.cola.put(("resultado", (libro, resultado), None))
         except Exception as error:
             self.cola.put(("error", str(error), None))
@@ -452,6 +600,14 @@ class VentanaPrincipal(tk.Tk):
         self.pill_filas.actualizar(f"{resultado['total_filas']:,}")
         self.pill_duplicados.actualizar(f"{resultado['total_duplicados']:,}")
         self.pill_prueba.actualizar(f"{resultado['total_prueba']:,}")
+
+        grupos_a_confirmar = getattr(self, "_grupos_a_confirmar", None)
+        if grupos_a_confirmar:
+            try:
+                confirmar_grupos_archivo(self.proceso, grupos_a_confirmar)
+            except Exception as error:
+                self._escribir_log(f"No se pudo guardar la asociacion de eventos: {error}", "advertencia")
+            self._grupos_a_confirmar = {}
 
         for widget in self.contenedor_acordeon.winfo_children():
             widget.destroy()

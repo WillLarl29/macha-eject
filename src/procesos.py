@@ -31,9 +31,12 @@ class Proceso:
     variable_mes_evento: str | None = None
     # Ajustes extra, por proceso, sobre una fila ya mapeada (ver dpa_especial.py).
     postprocesar: Callable | None = None
-    # Estrategia alterna para nombre de hoja/FORMULARIO (por defecto: nombre de
-    # archivo + catalogo, via nombre_hoja.generar_nombre_hoja).
-    detectar_nombre_hoja: Callable | None = None
+    # Si True, los archivos que resuelven al mismo nombre de hoja/evento (por
+    # catalogo, por alias de archivo confirmado, o porque el usuario los
+    # agrupo manualmente desde la interfaz) se fusionan en UNA sola hoja, con
+    # deteccion de DNI duplicado compartida entre ellos. Si False (Pregrado),
+    # cada archivo es siempre su propia hoja, como siempre.
+    agrupar_archivos: bool = False
 
 
 PREGRADO = Proceso(
@@ -66,4 +69,5 @@ DPA = Proceso(
     # archivo de origen, que pueden venir desactualizadas y generar hojas
     # duplicadas para el mismo evento).
     postprocesar=_dpa_especial.postprocesar,
+    agrupar_archivos=True,
 )
